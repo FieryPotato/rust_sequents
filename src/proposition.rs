@@ -9,9 +9,6 @@ use crate::proposition::conditional::Conditional;
 use crate::proposition::conjunction::Conjunction;
 use crate::proposition::disjunction::Disjunction;
 use crate::proposition::negation::Negation;
-use crate::proposition::create::make_atom;
-
-use self::create::{make_unary, make_binary};
 
 
 #[derive(Debug, PartialEq, Eq)]
@@ -58,20 +55,20 @@ impl Proposition {
         }
     }
 
+    /// Return a proposition from input string. Each sub wff must be
+    /// encapsulated by parentheses, but the outermost pair may be omitted.
+    /// Order is always preserved. Improper bracketing may result in the
+    /// string being converted into one big Proposition::Atom.
+    /// Eg. "(the cat is on the mat & the rat wears a hat) -> the bat is a brat"
+    /// becomes: Conditional(Conjunction(cat..., rat...), bat...)
     pub fn from_string(string: String) -> Result<Self, PropositionError> {
-        let word_groups: Vec<String> = create::find_connective(string);
-        match word_groups.len() {
-            1 => {
-                Ok(make_atom(word_groups))
-            },
-            2 => {
-                make_unary(word_groups) // -> Result<Proposition, PropositionError>
-            },
-            3 => {
-                make_binary(word_groups) // -> Result<Proposition, PropositionError>
-            }
-            _ => Err(PropositionError::NoConnectiveFound)
-        }
+        create::find_connective(string)
+        // match word_groups.len() {
+        //     1 => Ok(make_atom(word_groups)), // Vec<string> -> Atom is always successful.
+        //     2 => make_unary(word_groups), // Vec<connective, string> -> Result<Proposition, PropositionError>
+        //     3 => make_binary(word_groups), // Vec<string, connective, string> -> Result<Proposition, PropositionError>
+        //     _ => Err(PropositionError::NoConnectiveFound) // 0 is no good, 4+ is undefined.
+        // }
     }
 }
 

@@ -1,7 +1,10 @@
 use itertools::Itertools;
-use crate::proposition::{is_conjunction_str, is_negation_str, Proposition, PropositionError, Connective};
+use crate::proposition::{Proposition, PropositionError, Connective};
+use crate::proposition::{is_conjunction_str, is_negation_str, is_conditional_str, is_disjunction_str};
 use crate::proposition::negation::Negation;
 use crate::proposition::conjunction::Conjunction;
+use crate::proposition::conditional::Conditional;
+
 
 
 /// Remove the outermost connected pair of parentheses ("()") from the input string.
@@ -39,21 +42,54 @@ pub fn deparenthesize(string: &mut String) {
 /// ~ A => vec!["~", "A"],
 /// A & B => vec!["A", "&", "B"]
 /// etc.
-pub fn find_connective(mut string: String) -> Vec<String> {
+pub fn find_connective(mut string: String) -> Result<Proposition, PropositionError> {
     deparenthesize(&mut string);
-    if string.len() == 0 { return vec![String::new()] }
+    if string.len() == 0 { return Err(PropositionError::NoConnectiveFound) }
     // Check for negations.
     match try_parse_as_unary_connective(&string) {
-        Some(r) => return r,
+        Some(mut word_groups) => {
+            let content: String = word_groups.pop().expect("split_string.len() == 2");
+            let connective: String = word_groups.pop().expect("split_string.len() == 1");
+            if is_negation_str(&connective) {
+                match Proposition::from_string(content) {
+                    Ok(p) => {
+                        let negation: Negation = *Negation::from_propositions(vec![p])?;
+                        return Ok(Proposition::Negation(negation))
+                    },
+                    Err(e) => return Err(e)
+                }
+            } else {
+                return Err(PropositionError::InvalidConnective)
+            }
+        }
         None => {}
     }
     // Check for binary connections
     match try_parse_as_binary_connective(&string) {
-        Some(r) => return r,
+        Some(mut word_groups) => {
+            let right: String = word_groups.pop().expect("split_string.len() == 3");
+            let connective: String = word_groups.pop().expect("split_string.len() == 2");
+            let left: String = word_groups.pop().expect("split_string.len() == 1");
+            match connective {
+                _ if is_conjunction_str(&connective) => {
+                    let left: Proposition = Proposition::from_string(left)?;
+                    let right: Proposition = Proposition::from_string(right)?;
+                    let conjunction: Conjunction = *Conjunction::from_propositions(vec![left, right])?;
+                    return Ok(Proposition::Conjunction(conjunction))
+                }
+                _ if is_conditional_str(&connective) => {
+                    let left: Proposition = Proposition::from_string(left)?;
+                    let right: Proposition = Proposition::from_string(right)?;
+                    let conditional: Conditional = *Conditional::from_propositions(vec![left, right])?;
+                    return Ok(Proposition::Conditional(conditional))
+                }
+                _ => return Err(PropositionError::NoConnectiveFound)
+            }
+        },
         None => {}
     }
     // Return as an Atom
-    vec![string]
+    Ok(Proposition::Atom(string))
 }
 
 fn try_parse_as_unary_connective(string: &String) -> Option<Vec<String>> {
@@ -89,47 +125,18 @@ fn try_parse_as_binary_connective(string: &String) -> Option<Vec<String>> {
                     deparenthesize(&mut right);
                     return Some(vec![left, c.to_owned(), right])
                 },
+                c if is_conditional_str(c) => {
+                    let mut left: String = word_vec[..index].join(" ");
+                    deparenthesize(&mut left);
+                    let mut right: String = word_vec[(index + 1)..].join(" ");
+                    deparenthesize(&mut right);
+                    return Some(vec![left, c.to_owned(), right])
+                },
                 _ => {}
             }
         }
     }
     None
-}
-
-pub(crate) fn make_atom(mut word_groups: Vec<String>) -> Proposition {
-    let content = word_groups.pop().expect("split_string.len() should be 1");
-    Proposition::Atom(content)
-}
-
-pub(crate) fn make_unary(mut word_groups: Vec<String>) -> Result<Proposition, PropositionError> {
-    let content: String = word_groups.pop().expect("split_string.len() == 2");
-    let connective: String = word_groups.pop().expect("split_string.len() == 1");
-    if is_negation_str(&connective) {
-        match Proposition::from_string(content) {
-            Ok(p) => {
-                let negation: Negation = *Negation::from_propositions(vec![p])?;
-                Ok(Proposition::Negation(negation))
-            },
-            Err(e) => Err(e)
-        }
-    } else {
-        Err(PropositionError::InvalidConnective)
-    }
-}
-
-pub(crate) fn make_binary(mut word_groups: Vec<String>) -> Result<Proposition, PropositionError> {
-    let right: String = word_groups.pop().expect("split_string.len() == 3");
-    let connective: String = word_groups.pop().expect("split_string.len() == 2");
-    let left: String = word_groups.pop().expect("split_string.len() == 1");
-    match connective {
-        _ if is_conjunction_str(&connective) => {
-            let left: Proposition = Proposition::from_string(left)?;
-            let right: Proposition = Proposition::from_string(right)?;
-            let conjunction: Conjunction = *Conjunction::from_propositions(vec![left, right])?;
-            Ok(Proposition::Conjunction(conjunction))
-        }
-        _ => Err(PropositionError::NoConnectiveFound)
-    }
 }
 
 #[cfg(test)]
@@ -217,6 +224,50 @@ mod test {
         match actual {
             Proposition::Conjunction(c) => assert_eq!(expected, c),
             _ => panic!["conjunction was not successfully created"]
+        }
+    }
+
+    #[test]
+    fn nested_conjunction() {
+        // actual
+        let string: String = String::from("(the cat is on the mat & the mat is under the cat) and (the hat is on the rat & the rat wears the hat)");
+        let actual: Proposition = Proposition::from_string(string).unwrap();
+
+        // expected
+        let inner_ll: String = String::from("the cat is on the mat");
+        let inner_ll: Proposition = Proposition::Atom(inner_ll);
+        let inner_lr: String = String::from("the mat is under the cat");
+        let inner_lr: Proposition = Proposition::Atom(inner_lr);
+        let inner_rl: String = String::from("the hat is on the rat");
+        let inner_rl: Proposition = Proposition::Atom(inner_rl);
+        let inner_rr: String = String::from("the rat wears the hat");
+        let inner_rr: Proposition = Proposition::Atom(inner_rr);
+        let outer_l: Conjunction = *Conjunction::from_propositions(vec![inner_ll, inner_lr]).unwrap();
+        let outer_r: Conjunction = *Conjunction::from_propositions(vec![inner_rl, inner_rr]).unwrap();
+        let expected: Conjunction = *Conjunction::from_connectives(vec![outer_l, outer_r]).unwrap();
+
+        match actual {
+            Proposition::Conjunction(c) => assert_eq!(expected, c),
+            _ => panic!["Conjunction was not successfully created"]
+        }
+    }
+
+    #[test]
+    fn conditional_from_string () {
+        // actual
+        let string: String = String::from("the cat is on the mat > the hat is on the rat");
+        let actual: Proposition = Proposition::from_string(string).unwrap();
+
+        // expected
+        let left: String = String::from("the cat is on the mat");
+        let left: Proposition = Proposition::Atom(left);
+        let right: String = String::from("the hat is on the rat");
+        let right: Proposition = Proposition::Atom(right);
+        let expected: Conditional = *Conditional::from_propositions(vec![left, right]).unwrap();
+
+        match actual {
+            Proposition::Conditional(c) => assert_eq!(expected, c),
+            _ => panic!["Conditional was not successfully created"]
         }
     }
 }
