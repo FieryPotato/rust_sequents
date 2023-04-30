@@ -1,15 +1,13 @@
-mod negation;
-mod conjunction;
 mod conditional;
-mod disjunction;
+mod conjunction;
 mod create;
-
+mod disjunction;
+mod negation;
 
 use crate::proposition::conditional::Conditional;
 use crate::proposition::conjunction::Conjunction;
 use crate::proposition::disjunction::Disjunction;
 use crate::proposition::negation::Negation;
-
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Proposition {
@@ -86,7 +84,5 @@ pub trait Connective {
 pub enum PropositionError {
     IncorrectNumberOfArguments(String),
     NoConnectiveFound,
-    InvalidConnective
+    InvalidConnective,
 }
-
-

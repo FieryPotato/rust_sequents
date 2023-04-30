@@ -59,29 +59,45 @@ pub fn find_connective(mut string: String) -> Result<Proposition, PropositionErr
     }
 
     // Check for binary connections
-    match try_parse_as_binary_connective(&string) {
-        Some(mut word_groups) => {
-            let right: String = word_groups.pop().expect("split_string.len() == 3");
-            let connective: String = word_groups.pop().expect("split_string.len() == 2");
-            let left: String = word_groups.pop().expect("split_string.len() == 1");
-            match connective {
-                _ if is_conjunction_str(&connective) => {
+    let mut nestedness: i32 = 0;
+    for (index, word) in words.enumerate() {
+        for char in word.chars() {
+            match char {
+                '(' => nestedness += 1,
+                ')' => nestedness -= 1,
+                _ => {}
+            };
+        }
+
+        if nestedness == 0 {
+            let word_vec: Vec<&str> = string.split_whitespace().collect();
+            match word {
+                c if is_conjunction_str(c) => {
+                    let mut left: String = word_vec[..index].join(" ");
+                    deparenthesize(&mut left);
                     let left: Proposition = Proposition::from_string(left)?;
+                    let mut right: String = word_vec[(index + 1)..].join(" ");
+                    deparenthesize(&mut right);
                     let right: Proposition = Proposition::from_string(right)?;
                     let conjunction: Conjunction = *Conjunction::from_propositions(vec![left, right])?;
                     return Ok(Proposition::Conjunction(conjunction))
-                }
-                _ if is_conditional_str(&connective) => {
+                },
+
+                c if is_conditional_str(c) => {
+                    let mut left: String = word_vec[..index].join(" ");
+                    deparenthesize(&mut left);
                     let left: Proposition = Proposition::from_string(left)?;
+                    let mut right: String = word_vec[(index + 1)..].join(" ");
+                    deparenthesize(&mut right);
                     let right: Proposition = Proposition::from_string(right)?;
                     let conditional: Conditional = *Conditional::from_propositions(vec![left, right])?;
                     return Ok(Proposition::Conditional(conditional))
-                }
-                _ => return Err(PropositionError::NoConnectiveFound)
+                },
+                _ => {}
             }
-        },
-        None => {}
+        }
     }
+
     // Return as an Atom
     Ok(Proposition::Atom(string))
 }
@@ -94,18 +110,6 @@ fn create_negation(mut negatum: String) -> Result<Proposition, PropositionError>
             return Ok(Proposition::Negation(negation))
         },
         Err(e) => return Err(e)
-    }
-}
-
-fn try_parse_as_unary_connective(string: &String) -> Option<Vec<String>> {
-    let mut words = string.split_whitespace();
-    match words.next().expect("words has len > 0") {
-        c if is_negation_str(c) => {
-            let mut negatum: String = words.join(" ");
-            deparenthesize(&mut negatum);
-            return Some(vec![c.to_owned(), negatum])
-        },
-        _ => None
     }
 }
 
@@ -143,6 +147,7 @@ fn try_parse_as_binary_connective(string: &String) -> Option<Vec<String>> {
     }
     None
 }
+
 
 #[cfg(test)]
 mod test {
