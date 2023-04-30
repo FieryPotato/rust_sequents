@@ -63,12 +63,6 @@ impl Proposition {
     /// becomes: Conditional(Conjunction(cat..., rat...), bat...)
     pub fn from_string(string: String) -> Result<Self, PropositionError> {
         create::find_connective(string)
-        // match word_groups.len() {
-        //     1 => Ok(make_atom(word_groups)), // Vec<string> -> Atom is always successful.
-        //     2 => make_unary(word_groups), // Vec<connective, string> -> Result<Proposition, PropositionError>
-        //     3 => make_binary(word_groups), // Vec<string, connective, string> -> Result<Proposition, PropositionError>
-        //     _ => Err(PropositionError::NoConnectiveFound) // 0 is no good, 4+ is undefined.
-        // }
     }
 }
 

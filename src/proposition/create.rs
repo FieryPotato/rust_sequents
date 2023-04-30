@@ -1,4 +1,8 @@
+use std::iter::Peekable;
+use std::str::SplitWhitespace;
+
 use itertools::Itertools;
+
 use crate::proposition::{Proposition, PropositionError, Connective};
 use crate::proposition::{is_conjunction_str, is_negation_str, is_conditional_str, is_disjunction_str};
 use crate::proposition::negation::Negation;
@@ -45,25 +49,15 @@ pub fn deparenthesize(string: &mut String) {
 pub fn find_connective(mut string: String) -> Result<Proposition, PropositionError> {
     deparenthesize(&mut string);
     if string.len() == 0 { return Err(PropositionError::NoConnectiveFound) }
+    let mut words: Peekable<SplitWhitespace> = string.split_whitespace().peekable();
+
     // Check for negations.
-    match try_parse_as_unary_connective(&string) {
-        Some(mut word_groups) => {
-            let content: String = word_groups.pop().expect("split_string.len() == 2");
-            let connective: String = word_groups.pop().expect("split_string.len() == 1");
-            if is_negation_str(&connective) {
-                match Proposition::from_string(content) {
-                    Ok(p) => {
-                        let negation: Negation = *Negation::from_propositions(vec![p])?;
-                        return Ok(Proposition::Negation(negation))
-                    },
-                    Err(e) => return Err(e)
-                }
-            } else {
-                return Err(PropositionError::InvalidConnective)
-            }
-        }
-        None => {}
+    if is_negation_str(words.peek().expect("words has len > 0")) {
+        words.next();  // We know that the first word in words is a negation string,
+                       // so we advance the iterator to get it out of the way.
+        return create_negation(words.join(" "))
     }
+
     // Check for binary connections
     match try_parse_as_binary_connective(&string) {
         Some(mut word_groups) => {
@@ -90,6 +84,17 @@ pub fn find_connective(mut string: String) -> Result<Proposition, PropositionErr
     }
     // Return as an Atom
     Ok(Proposition::Atom(string))
+}
+
+fn create_negation(mut negatum: String) -> Result<Proposition, PropositionError> {
+    deparenthesize(&mut negatum);
+    match Proposition::from_string(negatum) {
+        Ok(p) => {
+            let negation: Negation = *Negation::from_propositions(vec![p])?;
+            return Ok(Proposition::Negation(negation))
+        },
+        Err(e) => return Err(e)
+    }
 }
 
 fn try_parse_as_unary_connective(string: &String) -> Option<Vec<String>> {
