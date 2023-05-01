@@ -60,7 +60,7 @@ impl Proposition {
     /// Eg. "(the cat is on the mat & the rat wears a hat) -> the bat is a brat"
     /// becomes: Conditional(Conjunction(cat..., rat...), bat...)
     pub fn from_string(string: String) -> Result<Self, PropositionError> {
-        create::find_connective(string)
+        create::proposition_from_string(string)
     }
 }
 
