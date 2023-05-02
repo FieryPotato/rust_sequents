@@ -18,7 +18,6 @@ pub fn deparenthesize(string: &mut String) {
     if string.len() == 0 { return }
     // While string is bookended by parentheses:
     while string.starts_with('(') && string.ends_with(')') {
-        // Ensure outer parentheses match.
         let mut nestedness: i32 = 0;
         for (index, char) in string.chars().enumerate() {
             // '(' chars add 1 to nestedness,
@@ -36,6 +35,7 @@ pub fn deparenthesize(string: &mut String) {
                 return
             }
         }
+
         // If we haven't returned by now, the outermost characters are a
         // connected pair of parentheses, so we remove them and check again.
         *string = string[1..(string.len()-1)].to_owned()
@@ -101,7 +101,7 @@ fn check_for_binary_proposition(string: &String) -> Option<Result<Proposition, P
                 },
                 c if is_disjunction_str(c) => {
                     return Some(create_disjunction(left, right))
-                }
+                },
                 _ => {}
             }
         }

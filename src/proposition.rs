@@ -16,8 +16,6 @@ pub enum Proposition {
     Conjunction(Conjunction),
     Conditional(Conditional),
     Disjunction(Disjunction),
-    // Universal(Universal),
-    // Existential(Existential)
 }
 
 impl Proposition {
@@ -28,8 +26,6 @@ impl Proposition {
             Self::Conjunction(c) => c.complexity(),
             Self::Conditional(c) => c.complexity(),
             Self::Disjunction(d) => d.complexity(),
-            // Self::Universal(u) => u.complexity(),
-            // Self::Existential(e) => e.complexity()
         }
     }
 
