@@ -65,19 +65,25 @@ impl Sequent {
             cmp::Ordering::Greater => return Err(SequentError::TooManySemicolons),
             cmp::Ordering::Equal => { (s[0], s[1]) }
         };
-        let ant: Vec<Result<Proposition, PropositionError>> = ant
+        let ant: Result<Vec<Proposition>, PropositionError> = ant
             .split(',')
             .map(|str| String::from(str))
             .map(|prop| Proposition::from_string(prop))
             .collect();
-        let con: Vec<Result<Proposition, PropositionError>> = con
+        let antecedent: Vec<Proposition> = match ant {
+            Ok(v) => v,
+            Err(e) => return Err(SequentError::PropositionError(e))
+        };
+        let con: Result<Vec<Proposition>, PropositionError> = con
             .split(',')
             .map(|str| String::from(str))
             .map(|prop| Proposition::from_string(prop))
             .collect();
-
-
-        todo!()
+        let consequent: Vec<Proposition> = match con {
+            Ok(v) => v,
+            Err(e) => return Err(SequentError::PropositionError(e))
+        };
+        Ok(Sequent { antecedent, consequent })
     }
 }
 
