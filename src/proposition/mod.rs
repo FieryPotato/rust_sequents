@@ -1,5 +1,7 @@
+use lazy_static::lazy_static;
 use std::cmp;
 use std::fmt::{Display, Formatter};
+use regex::Regex;
 
 pub enum Proposition {
     Atom(String),
@@ -10,6 +12,7 @@ pub enum Proposition {
     Existential(String, Box<Proposition>),
     Universal(String, Box<Proposition>)
 }
+
 impl Proposition {
     pub fn complexity(&self) -> usize {
         match self {
@@ -21,6 +24,36 @@ impl Proposition {
             Proposition::Existential(_, content) => 1 + content.complexity(),
             Proposition::Universal(_, content) => 1 + content.complexity(),
         }
+    }
+    pub fn names(&self) -> Vec<String> {
+        match self {
+            Proposition::Atom(atom) => get_names(atom),
+            Proposition::Negation(negatum) => negatum.names(),
+            Proposition::Conditional(left, right) => {
+                let mut names: Vec<String> = Vec::new();
+                for name in left.names() { names.push(name); }
+                for name in right.names() { names.push(name); }
+                names
+            },
+            Proposition::Conjunction(left, right) => {
+                let mut names: Vec<String> = Vec::new();
+                for name in left.names() { names.push(name); }
+                for name in right.names() { names.push(name); }
+                names
+            },
+            Proposition::Disjunction(left, right) => {
+                let mut names: Vec<String> = Vec::new();
+                for name in left.names() { names.push(name); }
+                for name in right.names() { names.push(name); }
+                names
+            },
+            Proposition::Existential(_, content) => content.names(),
+            Proposition::Universal(_, content) => content.names()
+        }
+    }
+
+    pub(crate) fn instantiate(&mut self, var: String, name: String) {
+        todo!()
     }
 }
 
@@ -50,4 +83,16 @@ impl Display for Proposition {
             Proposition::Universal(var, content) => write!(f, "∀{}({})", var, content),
         }
     }
+}
+
+
+fn get_names(string: &String) -> Vec<String> {
+    let mut names: Vec<String> = Vec::new();
+    lazy_static! {
+        // match sets of two or more contiguous lowercase letters between angle brackets
+        static ref RE: Regex = Regex::new(r"\<([a-z]{2,})\>").unwrap();
+    }
+    for capture in RE.captures_iter(string) {
+        names.push(capture[1].to_string());    }
+    names
 }

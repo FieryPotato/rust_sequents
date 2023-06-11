@@ -10,15 +10,6 @@ pub struct Sequent {
 }
 
 impl Sequent {
-    pub(crate) fn push_right(&mut self, proposition: Box<Proposition>) {
-        self.ant.push(*proposition);
-    }
-    pub(crate) fn push_left(&mut self, proposition: Box<Proposition>) {
-        self.con.push(*proposition);
-    }
-}
-
-impl Sequent {
     /// Return the number of connectives in self.
     pub fn complexity(&self) -> usize {
         let ant_complexity = itertools::max(self.ant.iter().map(|prop| prop.complexity())).unwrap_or(0);
@@ -52,6 +43,34 @@ impl Sequent {
         }
         None
     }
+
+    /// Push proposition to the consequent of self.
+    pub(crate) fn push_right(&mut self, proposition: Proposition) {
+        self.ant.push(proposition);
+    }
+
+    /// Push proposition to the antecedent of self.
+    pub(crate) fn push_left(&mut self, proposition: Proposition) {
+        self.con.push(proposition);
+    }
+
+    /// Return the names in all the propositions in self.
+    pub fn names(&self) -> Vec<String> {
+        let mut names: Vec<String> = Vec::new();
+        for prop in self.ant.iter() {
+            for name in prop.names() {
+                names.push(name);
+            }
+        }
+        for prop in self.con.iter() {
+            for prop in self.con.iter() {
+                for name in prop.names() {
+                    names.push(name);
+                }
+            }
+        }
+        names
+    }
 }
 
 impl Display for Sequent {
@@ -59,6 +78,14 @@ impl Display for Sequent {
         let ant: String = self.ant.iter().map(|x| x.to_string()).join(", ");
         let con: String = self.con.iter().map(|x| x.to_string()).join(", ");
         write!(f, "{ant} |~ {con}")
+    }
+}
+
+impl Clone for Sequent {
+    fn clone(&self) -> Self {
+        let ant = self.ant.clone();
+        let con = self.con.clone();
+        Sequent { ant, con }
     }
 }
 
