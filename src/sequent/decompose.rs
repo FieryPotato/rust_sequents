@@ -3,25 +3,25 @@ use crate::sequent::{Sequent, Side};
 use crate::{branch, leaf};
 
 
-pub fn decompose(mut sequent: Sequent) -> Option<Branch> {
+pub fn decompose(mut sequent: Sequent, names: &Vec<String>) -> Option<Branch> {
     match sequent.first_complex_proposition() {
         None => None,
         Some(fcp) => {
             let proposition: Proposition = sequent.remove(&fcp);
             match proposition {
                 Proposition::Atom(_) => panic!("Atom should have been caught by previous match statement"),
-                Proposition::Negation(negatum) => Some(decompose_negation(sequent, fcp.side, *negatum)),
-                Proposition::Conditional(left, right) => Some(decompose_conditional(sequent, fcp.side, *left, *right)),
-                Proposition::Conjunction(left, right) => Some(decompose_conjunction(sequent, fcp.side, *left, *right)),
-                Proposition::Disjunction(left, right) => Some(decompose_disjunction(sequent, fcp.side, *left, *right)),
-                Proposition::Existential(var, content) => Some(decompose_existential(sequent, fcp.side, var, *content)),
-                Proposition::Universal(var, content) => Some(decompose_universal(sequent, fcp.side, var, *content)),
+                Proposition::Negation(negatum) => Some(decompose_negation(sequent, fcp.side, *negatum, names)),
+                Proposition::Conditional(left, right) => Some(decompose_conditional(sequent, fcp.side, *left, *right, names)),
+                Proposition::Conjunction(left, right) => Some(decompose_conjunction(sequent, fcp.side, *left, *right, names)),
+                Proposition::Disjunction(left, right) => Some(decompose_disjunction(sequent, fcp.side, *left, *right, names)),
+                Proposition::Existential(var, content) => Some(decompose_existential(sequent, fcp.side, var, *content, names)),
+                Proposition::Universal(var, content) => Some(decompose_universal(sequent, fcp.side, var, *content, names)),
             }
         }
     }
 }
 
-fn decompose_negation(mut sequent: Sequent, side: Side, negatum: Proposition) -> Branch {
+fn decompose_negation(mut sequent: Sequent, side: Side, negatum: Proposition, names: &Vec<String>) -> Branch {
     match side {
         Side::Antecedent => {
             sequent.push_right(negatum);
@@ -34,7 +34,7 @@ fn decompose_negation(mut sequent: Sequent, side: Side, negatum: Proposition) ->
     }
 }
 
-fn decompose_conditional(mut sequent: Sequent, side: Side, left: Proposition, right: Proposition) -> Branch {
+fn decompose_conditional(mut sequent: Sequent, side: Side, left: Proposition, right: Proposition, names: &Vec<String>) -> Branch {
     match side {
         Side::Antecedent => {
             let mut parent_0: Sequent = sequent.clone();
@@ -51,7 +51,7 @@ fn decompose_conditional(mut sequent: Sequent, side: Side, left: Proposition, ri
     }
 }
 
-fn decompose_conjunction(mut sequent: Sequent, side: Side, left: Proposition, right: Proposition) -> Branch {
+fn decompose_conjunction(mut sequent: Sequent, side: Side, left: Proposition, right: Proposition, names: &Vec<String>) -> Branch {
     match side {
         Side::Antecedent => {
             sequent.push_left(left);
@@ -68,7 +68,7 @@ fn decompose_conjunction(mut sequent: Sequent, side: Side, left: Proposition, ri
     }
 }
 
-fn decompose_disjunction(mut sequent: Sequent, side: Side, left: Proposition, right: Proposition) -> Branch {
+fn decompose_disjunction(mut sequent: Sequent, side: Side, left: Proposition, right: Proposition, names: &Vec<String>) -> Branch {
     match side {
         Side::Antecedent => {
             let mut parent_0: Sequent = sequent.clone();
@@ -85,7 +85,7 @@ fn decompose_disjunction(mut sequent: Sequent, side: Side, left: Proposition, ri
     }
 }
 
-fn decompose_existential(sequent: Sequent, side: Side, var: String, content: Proposition) -> Branch {
+fn decompose_existential(sequent: Sequent, side: Side, var: String, content: Proposition, names: &Vec<String>) -> Branch {
     match side {
         Side::Antecedent => {
            todo!("A branch for each name not in the sequent, each branch has one leaf.")
@@ -99,7 +99,7 @@ fn decompose_existential(sequent: Sequent, side: Side, var: String, content: Pro
             for name in names.into_iter() {
                 let mut leaf: Sequent = sequent.clone();
                 let mut prop: Proposition = content.clone();
-                prop.instantiate(var.clone(), name);
+                prop.instantiate(&var, &name);
                 leaf.push_right(prop);
                 leaves.push(leaf![leaf])
             }
@@ -108,7 +108,7 @@ fn decompose_existential(sequent: Sequent, side: Side, var: String, content: Pro
     }
 }
 
-fn decompose_universal(sequent: Sequent, side: Side, var: String, content: Proposition) -> Branch {
+fn decompose_universal(sequent: Sequent, side: Side, var: String, content: Proposition, names: &Vec<String>) -> Branch {
     match side {
         Side::Antecedent => {
             let mut names = content.names();
@@ -119,7 +119,7 @@ fn decompose_universal(sequent: Sequent, side: Side, var: String, content: Propo
             for name in names.into_iter() {
                 let mut leaf: Sequent = sequent.clone();
                 let mut prop: Proposition = content.clone();
-                prop.instantiate(var.clone(), name);
+                prop.instantiate(&var.clone(), &name);
                 leaf.push_right(prop);
                 leaves.push(leaf![leaf])
             }
