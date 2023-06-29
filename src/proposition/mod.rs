@@ -1,9 +1,10 @@
-mod create;
+pub(crate) mod create;
 
 use lazy_static::lazy_static;
 use std::cmp;
 use std::fmt::{Display, Formatter};
 use regex::Regex;
+use crate::proposition::create::proposition_from_string;
 
 #[derive(Debug, PartialEq)]
 pub enum Proposition {
@@ -28,6 +29,19 @@ impl Proposition {
             Proposition::Universal(_, predicate) => 1 + predicate.complexity(),
         }
     }
+
+    pub fn connective(&self) -> Option<char> {
+        match self {
+            Self::Atom(_) => None,
+            Self::Negation(_) => Some('~'),
+            Self::Conditional(_, _) => Some('>'),
+            Self::Conjunction(_, _) => Some('&'),
+            Self::Disjunction(_, _) => Some('v'),
+            Self::Existential(_, _) => Some('∃'),
+            Self::Universal(_, _) => Some('∀'),
+        }
+    }
+
     pub fn names(&self) -> Vec<String> {
         match self {
             Proposition::Atom(atom) => get_names(atom),
@@ -120,6 +134,10 @@ impl Proposition {
             Self::Universal(_, predicate) => vec![&*predicate],
         }
     }
+
+    pub fn from_str(s: &str) -> Proposition {
+        proposition_from_string(String::from(s)).unwrap()
+    }
 }
 
 impl Clone for Proposition {
@@ -171,8 +189,19 @@ fn get_names(string: &String) -> Vec<String> {
 }
 
 fn set_name(string: &mut String, var: &String, name: &String) {
-    let mut name_re = Regex::new(format!("<({var})>").as_str()).unwrap();
+    let name_re = Regex::new(format!("<({var})>").as_str()).unwrap();
     *string = name_re.replace_all(string.as_str(), format!("<{name}>")).to_string();
+}
+
+#[derive(Debug)]
+pub enum PropositionType {
+    Atom,
+    Negation,
+    Conditional,
+    Conjunction,
+    Disjunction,
+    Existential,
+    Universal
 }
 
 

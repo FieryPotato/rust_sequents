@@ -1,4 +1,5 @@
 mod decompose;
+mod create;
 
 use std::fmt::{Display, Formatter};
 use itertools::Itertools;
@@ -63,10 +64,8 @@ impl Sequent {
             }
         }
         for prop in self.con.iter() {
-            for prop in self.con.iter() {
-                for name in prop.names() {
-                    names.push(name);
-                }
+            for name in prop.names() {
+                names.push(name);
             }
         }
         names
